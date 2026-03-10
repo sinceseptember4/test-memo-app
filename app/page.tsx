@@ -1,15 +1,17 @@
 'use client';
 
 import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  where,
   orderBy,
   onSnapshot,
-  Timestamp
+  Timestamp,
+  deleteDoc,
+  doc
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -17,7 +19,7 @@ import {
   signInAnonymously,
   onAuthStateChanged,
   linkWithPopup,
-  User
+  User,
 } from 'firebase/auth';
 import { useState, useEffect } from 'react';
 
@@ -49,7 +51,7 @@ export default function Home() {
   const [text, setText] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [memos, setMemos] = useState<Memo[]>([]);
-// 1. ログイン状態の監視
+  // 1. ログイン状態の監視
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -69,21 +71,21 @@ export default function Home() {
     const q = query(
       collection(db, 'memos'),
       where('userId', '==', currentUser.uid),
-      orderBy('timestamp', 'desc')
+      orderBy('timestamp', 'desc'),
     );
 
     // リアルタイムリスナー（DBが変わると勝手に画面も変わる神機能）
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const memoData = snapshot.docs.map(doc => ({
+      const memoData = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       })) as Memo[];
       setMemos(memoData);
     });
 
     return () => unsubscribe();
   }, [currentUser]);
-const handleSave = async () => {
+  const handleSave = async () => {
     if (!text) return alert('なんか書いて！');
     if (!currentUser) return alert('ユーザーがいないよ');
 
@@ -111,33 +113,87 @@ const handleSave = async () => {
       alert('失敗。既に別のGoogle垢でログインしたことあるかも？');
     }
   };
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('これ消しちゃっていいの？')) return;
+    try {
+      // db, コレクション名, ドキュメントID を指定して爆破
+      await deleteDoc(doc(db, 'memos', id));
+      // onSnapshot が勝手に検知して画面からも消えるよ
+    } catch (e) {
+      console.error(e);
+    }
+  };
   return (
     <main style={{ padding: '50px', textAlign: 'center', color: 'white' }}>
       <h1>超・進化したメモアプリ</h1>
 
       {/* 入力エリア */}
-      <input 
-        value={text} 
-        onChange={(e) => setText(e.target.value)} 
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
         style={{ color: 'black', padding: '10px' }}
       />
-      <button onClick={handleSave} style={{ padding: '10px', background: 'blue' }}>保存</button>
+      <button
+        onClick={handleSave}
+        style={{ padding: '10px', background: 'blue' }}
+      >
+        保存
+      </button>
 
       {/* 昇格ボタン（匿名時のみ表示） */}
       {currentUser?.isAnonymous && (
-        <button onClick={upgradeAccount} style={{ display: 'block', margin: '20px auto', background: 'orange' }}>
+        <button
+          onClick={upgradeAccount}
+          style={{
+            display: 'block',
+            margin: '20px auto',
+            background: 'orange',
+          }}
+        >
           Google連携してデータを守る
         </button>
       )}
 
       {/* メモ一覧表示 */}
       <ul style={{ marginTop: '30px', listStyle: 'none' }}>
-        {memos.map(memo => (
-          <li key={memo.id} style={{ borderBottom: '1px solid #444', padding: '10px' }}>
+        {memos.map((memo) => (
+          <li
+            key={memo.id}
+            style={{ borderBottom: '1px solid #444', padding: '10px' ,color: 'black',}}
+          >
             {memo.content}
           </li>
         ))}
       </ul>
+      {memos.map((memo) => (
+        <li
+          key={memo.id}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '10px',
+            borderBottom: '1px solid #333',
+          }}
+        >
+          <span
+          style={{
+            color: 'black',
+          }}
+          >{memo.content}</span>
+          <button
+            onClick={() => handleDelete(memo.id)}
+            style={{
+              background: 'red',
+              color: 'white',
+              border: 'none',
+              borderRadius: '3px',
+              cursor: 'pointer',
+            }}
+          >
+            消す
+          </button>
+        </li>
+      ))}
     </main>
   );
 }
