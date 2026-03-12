@@ -22,6 +22,7 @@ import {
   User,
 } from 'firebase/auth';
 import { useState, useEffect } from 'react';
+import Header from "@/components/layout/Header";
 
 interface Memo {
   id: string;
@@ -130,6 +131,7 @@ export default function Home() {
   };
   return (
     <main style={{ padding: '50px', textAlign: 'center', color: 'white' }}>
+      <Header />
       <h1>超・進化したメモアプリ</h1>
 
       {/* 入力エリア */}
