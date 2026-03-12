@@ -25,6 +25,7 @@ import { useState, useEffect } from 'react';
 
 interface Memo {
   id: string;
+  title: string;
   content: string;
   userId: string;
   timestamp: Timestamp;
@@ -49,6 +50,7 @@ export const googleProvider = new GoogleAuthProvider();
 
 export default function Home() {
   const [text, setText] = useState('');
+  const [title, setTitle] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [memos, setMemos] = useState<Memo[]>([]);
   // 1. ログイン状態の監視
@@ -87,15 +89,18 @@ export default function Home() {
   }, [currentUser]);
   const handleSave = async () => {
     if (!text) return alert('なんか書いて！');
+    if (!title) return alert('なんか書いて！');
     if (!currentUser) return alert('ユーザーがいないよ');
 
     try {
       await addDoc(collection(db, 'memos'), {
         content: text,
-        userId: currentUser.uid, // 👈 これ重要
+        title: title,
+        userId: currentUser.uid,
         timestamp: new Date(),
       });
       setText('');
+      setTitle('');
       alert('保存成功！');
     } catch (e) {
       console.error(e);
@@ -129,6 +134,12 @@ export default function Home() {
 
       {/* 入力エリア */}
       <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        style={{ color: 'black', padding: '10px', marginBottom: '10px' }}
+        placeholder="タイトル"
+      />
+      <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         style={{ color: 'black', padding: '10px' }}
@@ -161,7 +172,7 @@ export default function Home() {
             key={memo.id}
             style={{ borderBottom: '1px solid #444', padding: '10px' ,color: 'black',}}
           >
-            {memo.content}
+            {memo.title} - {memo.content}
           </li>
         ))}
       </ul>
@@ -179,7 +190,7 @@ export default function Home() {
           style={{
             color: 'black',
           }}
-          >{memo.content}</span>
+          >{memo.title} - {memo.content}</span>
           <button
             onClick={() => handleDelete(memo.id)}
             style={{
